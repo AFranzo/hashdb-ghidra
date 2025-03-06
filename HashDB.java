@@ -77,6 +77,7 @@ import ghidra.program.model.pcode.Varnode;
 import ghidra.program.model.scalar.Scalar;
 import ghidra.program.model.symbol.RefType;
 import ghidra.program.model.symbol.Reference;
+import ghidra.program.model.symbol.ReferenceIterator;
 
 import java.net.URL;
 import java.security.SecureRandom;
@@ -806,6 +807,7 @@ public class HashDB extends GhidraScript {
 						showProgressBar("Scanning functions", true, true, 0);
 						List<Address> calls = getCallAddresses(functions.get(0));
 						taskMonitor.initialize(calls.size());
+						
 						final class Resolver extends SwingWorker<Void, Object> {
 							@Override
 							protected Void doInBackground() throws Exception {
@@ -1693,7 +1695,7 @@ public class HashDB extends GhidraScript {
 			throw new IllegalStateException();
 		DecompInterface decompInterface = new DecompInterface();
 		decompInterface.openProgram(currentProgram);
-		DecompileResults decompileResults = decompInterface.decompileFunction(caller, 120, monitor);
+		DecompileResults decompileResults = decompInterface.decompileFunction(caller, 120, null);
 		if (!decompileResults.decompileCompleted())
 			throw new IllegalStateException();
 		HighFunction highFunction = decompileResults.getHighFunction();
@@ -1735,12 +1737,13 @@ public class HashDB extends GhidraScript {
 
 	private List<Address> getCallAddresses(Function deobfuscator) {
 		List<Address> addresses = new ArrayList<Address>();
-		for (Reference ref : getReferencesTo(deobfuscator.getEntryPoint())) {
+		ReferenceIterator refIter = currentProgram.getReferenceManager().getReferencesTo(deobfuscator.getEntryPoint());
+		while (refIter.hasNext()) {
+			Reference ref =refIter.next();
 			if (ref.getReferenceType() != RefType.UNCONDITIONAL_CALL)
 				continue;
 			addresses.add(ref.getFromAddress());
 		}
-
 		return addresses;
 	}
 }
